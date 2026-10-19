@@ -1,5 +1,7 @@
 # Function behavior and Fastly VCL mapping
 
+[Back to README](../README.md) · [Try the behavior](testing.md)
+
 The supplied `f_logo` VCL is a fallback renderer. It does not contain the original-logo lookup, the condition that calls `f_logo`, or a logging statement. This Function adds the explicit Blob lookup and structured logging needed for a standalone demonstration. We cannot infer every customer call site from that VCL alone.
 
 | VCL behavior | Function implementation |

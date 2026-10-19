@@ -1,10 +1,12 @@
-subscription_id = "00000000-0000-0000-0000-000000000000" # REPLACE
-name_prefix = "svgdemo"
-location = "westeurope"
-mode = "function_only"
-publish_artifacts = true
+subscription_id          = "00000000-0000-0000-0000-000000000000" # REPLACE
+name_prefix              = "svgdemo"
+location                 = "westeurope"
+mode                     = "function_only"
+publish_artifacts        = true
 publisher_ssh_public_key = "ssh-ed25519 REPLACE_WITH_PUBLIC_KEY"
-# Optional reuse (both non-full modes can reuse the same types of dependencies):
+# Optional: select an available x64 upload VM size if Standard_B1s is unavailable.
+# publisher_vm_size = "Standard_B2ls_v2"
+# Optional reuse; review docs/existing-front-door.md before setting these:
 # existing_service_plan_id = "/subscriptions/.../providers/Microsoft.Web/serverfarms/..."
 # existing_catalog = { account_id = "/subscriptions/.../providers/Microsoft.Storage/storageAccounts/...", account_name = "youraccount", container_name = "logos" }
 # existing_network = { vnet_id = "...", function_subnet_id = "...", private_endpoint_subnet_id = "...", publisher_subnet_id = "..." }

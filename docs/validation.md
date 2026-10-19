@@ -1,5 +1,9 @@
 # Validation scope
 
+[Back to README](../README.md) · [Test your deployment](testing.md)
+
+This records a completed acceptance run. Validation environments are temporary; deploy your own instance with the [Terraform](terraform.md) or [Azure CLI](azure-cli.md) guide to repeat the tests. The original demonstration environment is managed separately from this repository.
+
 GitHub Actions runs Function/Web App behavior tests, deterministic packaging/private-publisher tests, Azure CLI template and ownership tests, Terraform provider validation and mocked plans for the three deployment modes. These checks need no Azure credentials and create no Azure resources.
 
 On **2026-10-19**, the **full** mode was deployed and tested in two isolated West Europe environments: one created with Terraform and one with Azure CLI/ARM. Both passed the 23-check HTTP acceptance suite. The existing demo was preserved; its resource inventory was unchanged, its activity log showed no writes/deletions during the test, and its demo page continued returning HTTP 200.

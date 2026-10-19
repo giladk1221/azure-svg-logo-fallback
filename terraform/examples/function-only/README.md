@@ -1,3 +1,13 @@
-# function-only
+# Function only
 
-Copy `terraform.tfvars.example` to `terraform/demo.tfvars`, replace all placeholders, and follow the [Terraform guide](../../../docs/terraform.md). Use the shared Terraform root with one state per installation.
+Creates the private Function and its dependencies. It creates no Front Door or Web App; you must connect the Function to a Premium private origin before testing from the internet.
+
+From the repository root:
+
+```sh
+cp terraform/examples/function-only/terraform.tfvars.example terraform/demo.tfvars
+```
+
+Replace the placeholders, then follow the [Terraform guide](../../../docs/terraform.md). Run Terraform against the shared `terraform/` root, not this example directory; use one state per installation.
+
+[Integration and reuse](../../../docs/existing-front-door.md) · [Repository overview](../../../README.md)

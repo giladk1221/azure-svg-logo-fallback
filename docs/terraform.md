@@ -1,81 +1,102 @@
-# Terraform deployment
+# Deploy with Terraform
 
-From the repository root:
+[Back to README](../README.md) · Complete [setup](deployment.md) first. Run commands from the repository root.
+
+## 1. Choose one option
+
+Set `TF_OPTION` to **one** value from this table:
+
+| Value | Deployment |
+|---|---|
+| `full-demo` | Everything, including new Front Door and Web App |
+| `existing-front-door` | Function/dependencies and logo routing on an existing Premium endpoint |
+| `function-only` | Function/dependencies; you attach Front Door yourself |
 
 ```sh
-az login
-az account set --subscription YOUR_SUBSCRIPTION_ID
-npm test
-python3 scripts/package.py
-cp terraform/examples/full-demo/terraform.tfvars.example terraform/demo.tfvars
-# Or choose existing-front-door / function-only.
+TF_OPTION=full-demo
+cp "terraform/examples/$TF_OPTION/terraform.tfvars.example" terraform/demo.tfvars
 ```
 
-Edit the variable file and replace every placeholder, including the SSH public key if using the temporary publisher. For existing Front Door, first [review the route paths and ownership](existing-front-door.md). Keep a separate state and variable file per installation; never change mode to adopt a different installation.
+Edit `terraform/demo.tfvars`:
+
+| Setting | Value to enter |
+|---|---|
+| `subscription_id` | Your selected Azure subscription ID |
+| `name_prefix` | 3–12 lowercase letters/digits, starting with a letter; Terraform appends a unique suffix |
+| `location` | Your supported region, for example `westeurope` |
+| `publisher_ssh_public_key` | Complete SSH public key from setup |
+| `publisher_vm_size` | Optional override if `Standard_B1s` is unavailable |
+| `existing_front_door` | Existing-profile option only: profile name, resource group and endpoint name |
+
+Keep the example's `mode` and `publish_artifacts=true`. For either existing-environment option, review [integration and optional reuse inputs](existing-front-door.md). Use a fresh state for each installation; do not switch `mode` to repurpose a deployed stack.
+
+## 2. Package, review and deploy
 
 ```sh
+python3 scripts/package.py
 terraform -chdir=terraform init
 terraform -chdir=terraform validate
 terraform -chdir=terraform plan -var-file=demo.tfvars -out=demo.tfplan
+# Inspect the plan, then apply the saved plan:
 terraform -chdir=terraform apply demo.tfplan
+terraform -chdir=terraform output
 ```
 
-Use a protected remote backend with locking for shared work. Do not commit state, plans, `.tfvars` or credentials. The root uses local state initially so you can select your organization's backend.
+The default is local state. Protect state/plans and use a remote backend with locking for shared work; never commit them. A failed apply can leave resources: correct the reported cause, then plan/apply with the **same** state and variables.
 
-## Approve private origins and verify
+## 3. Connect the private origin
+
+**Full / existing Front Door:** review the matching Private Link requests, then approve:
 
 ```sh
 python3 scripts/approve-front-door.py
-# Review the exact resource IDs before approving:
 python3 scripts/approve-front-door.py --approve
 terraform -chdir=terraform output -raw demo_url
 ```
 
-The approval helper reads `front_door_private_link_approvals` from this Terraform state and matches exact request messages. It does not approve unrelated pending requests. Function-only has no requests until you connect it manually.
+The helper reads this stack's outputs and matches exact request messages. Full mode approves both Function and Web App; existing-profile mode only the Function. If Azure has not created the matching request yet, wait and rerun.
 
-After propagation, open the demo and run:
+**Function only:** skip the approval helper for now. Read the outputs below and follow the [manual integration steps](existing-front-door.md#function-only); there is no Front Door URL until you do so.
+
+```sh
+terraform -chdir=terraform output -raw function_id
+terraform -chdir=terraform output -raw function_hostname
+```
+
+## 4. Open and test
+
+After Private Link approval and edge propagation, open `demo_url` (`https://YOUR-FRONT-DOOR-HOST/logos/demo`), then run:
 
 ```sh
 python3 scripts/smoke.py https://YOUR-FRONT-DOOR-HOST
 ```
 
-For a reused catalog, pass `--original EXISTING_KEY --missing KNOWN_ABSENT_KEY`. In full mode, also open `/` and verify the response header `X-Demo-Origin: webapp`.
+Use the hostname **without** `/logos/demo` in this command. The [testing guide](testing.md) shows expected images/status codes, reused-catalog flags and troubleshooting. Full mode also serves the Web App at `/`.
 
-Set `publish_artifacts=false` in the **same** variable file and plan/apply again after successful verification. Terraform removes the temporary VM, NIC/NSG, upload role assignments and any temporary outbound NAT/public IP. The code package, Function and catalog remain.
+## 5. Remove the temporary uploader
 
-## Updates and teardown
-
-Rebuild the ZIP, temporarily enable publishing, plan/apply, verify and remove the publisher again. Hash-named packages preserve previous versions. Set a reviewed package-retention policy for longer-lived installations.
-
-Destroying the stack deletes new Storage data. Review `terraform -chdir=terraform plan -destroy -var-file=demo.tfvars` and preserve needed data before `terraform destroy`. Referenced profile/endpoint, catalog, network and plan are not owned/deleted by this stack. The logo routes/origins this stack added to an existing profile **are** removed by destroy; other routes remain.
-
-Use a fresh state for a new installation. If adopting previously deployed resources, review imports and the migration plan explicitly; do not accept destructive replacements as an installation shortcut.
-
-## Private runner alternative
-
-Apply with `publish_artifacts=false`, grant the private runner Blob Data Contributor on the host `packages` container, then run from that network:
+After successful testing, change **`publish_artifacts = false`** in the same `terraform/demo.tfvars`, then:
 
 ```sh
-python3 scripts/publish.py --host HOST_STORAGE_NAME --package .build/function.zip
-# Add --catalog NEW_DEMO_CATALOG_NAME only to seed a newly created demo catalog.
-az functionapp restart --resource-group WORKLOAD_RG --name FUNCTION_NAME
-az rest --method post --url 'https://management.azure.com/subscriptions/SUBSCRIPTION_ID/resourceGroups/WORKLOAD_RG/providers/Microsoft.Web/sites/FUNCTION_NAME/syncfunctiontriggers?api-version=2024-04-01'
+terraform -chdir=terraform plan -var-file=demo.tfvars -out=publisher-cleanup.tfplan
+# Confirm only temporary publisher resources/actions are removed:
+terraform -chdir=terraform apply publisher-cleanup.tfplan
 ```
 
-Add write permission on the new `logos` container only when seeding. `--identity` uses the runner VM's system identity instead of Azure CLI. The publisher verifies private DNS resolution and refuses to overwrite different existing content. Repeat restart/sync after each package update.
+This removes the VM, disk, NIC/NSG, upload roles and any temporary NAT/public IP. The Function, package, original logos and Front Door continue running. Charges for those retained services continue.
 
-## Regional upload VM capacity
+## Update the Function later
 
-The temporary private publisher defaults to `Standard_B1s`. Set `publisher_vm_size` in the Terraform variables or CLI JSON to an available **x64** size if the region/subscription rejects that SKU. For example, `Standard_B2ls_v2` was available for the West Europe acceptance deployment. Check your subscription before deploying:
+Change the code, rebuild with `python3 scripts/package.py`, set `publish_artifacts=true`, and repeat steps 2–5. Keep the same state and configuration. Hash-named packages retain previous versions; define package retention for long-lived deployments. A private runner can follow the [manual publishing procedure](deployment.md#private-runner-alternative).
+
+## Delete this installation
+
+This deletes newly created Storage and its data. Back up anything needed and review the destroy plan:
 
 ```sh
-az vm list-skus --location westeurope --resource-type virtualMachines --size Standard_B --all --query '[?length(restrictions)==`0`].name' -o table
+terraform -chdir=terraform plan -destroy -var-file=demo.tfvars -out=destroy.tfplan
+terraform -chdir=terraform apply destroy.tfplan
+terraform -chdir=terraform state list
 ```
 
-Availability can change. The publisher has no public IP on its NIC and is removed after verification; choosing another size does not change the application architecture.
-
-## Startup and edge propagation
-
-A successful resource deployment does not mean Front Door traffic is ready immediately. The first Functions container image pull and VNet setup can take several minutes. The CLI reports trigger-sync retries. Private Link approval can pass through `Approving`; the helper waits for `Approved` and rechecks state after transient Azure server errors. Rerun the approval command if Azure has not created the matching connection yet.
-
-After approvals, wait for Front Door to propagate its routes, then run the smoke checks. A temporary Front Door `404` with `X-Cache: CONFIG_NOCACHE` and an HTML error page is different from the application’s intentional missing-logo `404` with `X-Logo-Result: explicit-not-found`. Never enable public origin access to work around propagation.
+Referenced Front Door parents, catalog, network and plan are not deleted. Logo routes/origins and role assignments added by this stack **are** removed, including those on shared resources. Never delete a shared resource group as a shortcut. Keep state until teardown has completed.
