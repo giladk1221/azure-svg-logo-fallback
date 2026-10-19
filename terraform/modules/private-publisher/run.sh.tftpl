@@ -1,0 +1,7 @@
+#!/bin/sh
+set -eu
+python3 - <<'LOGO_PUBLISHER'
+namespace = {'__name__': 'private_publisher'}
+exec(${jsonencode(publisher)}, namespace)
+namespace['publish'](namespace['json'].loads(namespace['base64'].b64decode('${payload}')), True)
+LOGO_PUBLISHER

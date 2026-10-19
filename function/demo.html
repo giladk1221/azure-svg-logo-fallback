@@ -1,0 +1,16 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SVG logo lookup and fallback</title>
+<style>body{font:16px system-ui;max-width:1040px;margin:48px auto;padding:0 20px;color:#172c3c;background:#f3f7fa}h1{font-size:36px}main{display:grid;grid-template-columns:1fr 1fr;gap:24px}section{background:white;border:1px solid #d4e0e7;border-radius:12px;padding:24px}.logo{display:flex;gap:18px;align-items:center;margin:24px 0}.logo img{width:64px;height:64px;object-fit:contain}a{color:#2563eb}small{display:block;color:#516270;margin-top:5px}button{padding:12px;background:#2563eb;color:white;border:0;border-radius:6px;cursor:pointer}pre{white-space:pre-wrap;overflow-wrap:anywhere}details{margin:24px 0}@media(max-width:620px){main{grid-template-columns:1fr}}</style>
+<h1>Real logo when available.<br>Two letters when it is missing.</h1><p>API Management → private Function → private Blob Storage. Optional Front Door adds edge caching.</p>
+<main><section><h2>Stored SVG files</h2><p>HTTP 200 · Original file</p>
+<div class="logo"><img src="/logos/ACME.svg" alt="Stored ACME logo"><div><a href="/logos/ACME.svg">ACME</a><small>Sample original in Storage</small></div></div>
+<div class="logo"><img src="/logos/CONTOSO.svg" alt="Stored CONTOSO logo"><div><a href="/logos/CONTOSO.svg">CONTOSO</a><small>Sample original in Storage</small></div></div></section>
+<section><h2>Generated when missing</h2><p>HTTP 200 · Generated SVG</p>
+<div class="logo"><img src="/logos/JEMXX.svg" alt="Generated JE"><div><a href="/logos/JEMXX.svg">JEMXX → JE</a><small>No stored file</small></div></div>
+<div class="logo"><img src="/logos/NEWCO.svg" alt="Generated NE"><div><a href="/logos/NEWCO.svg">NEWCO → NE</a><small>No stored file</small></div></div></section></main>
+<details><summary>Optional explicit=true behavior</summary><p><a href="/logos/JEMXX.svg?explicit=true">Missing logo + explicit=true</a> returns an uncached 404. <a href="/logos/ACME.svg?explicit=true">Existing logo + explicit=true</a> still returns the original. Normal missing-logo requests return a generated SVG.</p></details>
+<p>Sample stored logos are fictional demo artwork. Generated colors are deterministic; exact Fastly color parity is not claimed.</p>
+<button id="check">Run checks</button><pre id="results" aria-live="polite"></pre>
+<script>
+const cases=[['ACME',200,'original'],['CONTOSO',200,'original'],['JEMXX',200,'fallback'],['NEWCO',200,'fallback'],['JEMXX.svg?explicit=true',404,'explicit-not-found'],['ACME.svg?explicit=true',200,'original']];
+document.querySelector('#check').onclick=async()=>{const b=document.querySelector('#check'),out=document.querySelector('#results');b.disabled=true;out.textContent='';try{for(const [name,status,decision] of cases){const path='/logos/'+(name.includes('.svg')?name:name+'.svg');for(let n=1;n<=2;n++){const r=await fetch(path);const result=r.headers.get('X-Logo-Result');await r.arrayBuffer();out.textContent+=`${r.status===status&&result===decision?'PASS':'FAIL'} ${path} · request ${n}\nHTTP ${r.status} · ${result} · Front Door ${r.headers.get('X-Cache')||'not present'}\n${r.headers.get('Cache-Control')}\n\n`;}}}catch(e){out.textContent+='Request failed: '+e.message;}finally{b.disabled=false;}};
+</script></html>
