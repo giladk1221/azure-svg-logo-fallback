@@ -47,7 +47,9 @@ class CliTests(unittest.TestCase):
         self.assertFalse(any(r['type']=='Microsoft.Web/serverfarms' for r in t['resources']))
         self.assertEqual(info['catalog_storage_name'],'sharedlogos')
     def test_publisher_private_and_failures_fail_deployment(self):
-        c,t,info=self.build(publish_artifacts=True,publisher_ssh_public_key='ssh-ed25519 PUBLIC_TEST_ONLY')
+        c,t,info=self.build(publish_artifacts=True,publisher_ssh_public_key='ssh-ed25519 PUBLIC_TEST_ONLY',publisher_vm_size='Standard_B2ls_v2')
+        vm=next(r for r in t['resources'] if r['type']=='Microsoft.Compute/virtualMachines')
+        self.assertEqual(vm['properties']['hardwareProfile']['vmSize'],'Standard_B2ls_v2')
         nic=next(r for r in t['resources'] if r['type']=='Microsoft.Network/networkInterfaces')
         self.assertNotIn('publicIPAddress',nic['properties']['ipConfigurations'][0]['properties'])
         run=next(r for r in t['resources'] if r['type'].endswith('/runCommands'))
@@ -76,9 +78,29 @@ class CliTests(unittest.TestCase):
         self.assertEqual(deploy.route_conflicts([route('demo-logos',['/logos/*'])],'demo'),[])
     def test_approval_targets_only_matching_request(self):
         vals=[{'id':'matching','properties':{'privateLinkServiceConnectionState':{'description':'demo-only','status':'Pending'}}},{'id':'unrelated','properties':{'privateLinkServiceConnectionState':{'description':'other','status':'Pending'}}}]
-        with patch.object(deploy,'rest_get',return_value={'value':vals}),patch.object(deploy,'az') as az:
+        approved={'properties':{'privateLinkServiceConnectionState':{'status':'Approved'}}}
+        with patch.object(deploy,'rest_get',side_effect=[{'value':vals},approved]),patch.object(deploy,'az') as az:
             deploy.approve([{'resource_id':'resource','request_message':'demo-only'}],True)
-            self.assertEqual(az.call_count,1);self.assertIn('matching',az.call_args.args);self.assertNotIn('unrelated',az.call_args.args)
+            self.assertEqual(az.call_count,1)
+            args=az.call_args.args
+            self.assertEqual(args[args.index('--url')+1],'https://management.azure.commatching?api-version=2024-04-01')
+            self.assertNotIn('unrelated',str(args))
+            body=json.loads(args[args.index('--body')+1])
+            self.assertEqual(body['properties']['privateLinkServiceConnectionState']['status'],'Approved')
+            self.assertNotIn('privateEndpoint',body['properties'])
+    def test_approval_resumes_approving_without_duplicate_write(self):
+        item={'id':'owned','properties':{'privateLinkServiceConnectionState':{'description':'demo-only','status':'Approving'}}}
+        approved={'properties':{'privateLinkServiceConnectionState':{'status':'Approved'}}}
+        with patch.object(deploy,'rest_get',side_effect=[{'value':[item]},approved]),patch.object(deploy,'az') as az:
+            deploy.approve([{'resource_id':'resource','request_message':'demo-only'}],True)
+            az.assert_not_called()
+    def test_approval_checks_state_after_transient_server_error(self):
+        item={'id':'owned','properties':{'privateLinkServiceConnectionState':{'description':'demo-only','status':'Pending'}}}
+        approving={'properties':{'privateLinkServiceConnectionState':{'status':'Approving'}}}
+        approved={'properties':{'privateLinkServiceConnectionState':{'status':'Approved'}}}
+        with patch.object(deploy,'rest_get',side_effect=[{'value':[item]},approving,approved]),patch.object(deploy,'az',side_effect=RuntimeError('Internal Server Error')) as az,patch.object(deploy.time,'sleep'):
+            deploy.approve([{'resource_id':'resource','request_message':'demo-only'}],True)
+            self.assertEqual(az.call_count,1)
     def test_render_each_mode_needs_no_azure_or_terraform(self):
         import tempfile,contextlib,io
         for mode in ('full','existing_front_door','function_only'):

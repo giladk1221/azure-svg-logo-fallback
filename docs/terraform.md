@@ -63,3 +63,19 @@ az rest --method post --url 'https://management.azure.com/subscriptions/SUBSCRIP
 ```
 
 Add write permission on the new `logos` container only when seeding. `--identity` uses the runner VM's system identity instead of Azure CLI. The publisher verifies private DNS resolution and refuses to overwrite different existing content. Repeat restart/sync after each package update.
+
+## Regional upload VM capacity
+
+The temporary private publisher defaults to `Standard_B1s`. Set `publisher_vm_size` in the Terraform variables or CLI JSON to an available **x64** size if the region/subscription rejects that SKU. For example, `Standard_B2ls_v2` was available for the West Europe acceptance deployment. Check your subscription before deploying:
+
+```sh
+az vm list-skus --location westeurope --resource-type virtualMachines --size Standard_B --all --query '[?length(restrictions)==`0`].name' -o table
+```
+
+Availability can change. The publisher has no public IP on its NIC and is removed after verification; choosing another size does not change the application architecture.
+
+## Startup and edge propagation
+
+A successful resource deployment does not mean Front Door traffic is ready immediately. The first Functions container image pull and VNet setup can take several minutes. The CLI reports trigger-sync retries. Private Link approval can pass through `Approving`; the helper waits for `Approved` and rechecks state after transient Azure server errors. Rerun the approval command if Azure has not created the matching connection yet.
+
+After approvals, wait for Front Door to propagate its routes, then run the smoke checks. A temporary Front Door `404` with `X-Cache: CONFIG_NOCACHE` and an HTML error page is different from the application’s intentional missing-logo `404` with `X-Logo-Result: explicit-not-found`. Never enable public origin access to work around propagation.

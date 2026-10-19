@@ -13,3 +13,5 @@ Stored SVGs are trusted administrator-uploaded assets. There is no public upload
 Use protected Terraform state or CLI config/manifests and separate installations per tool. The CLI's ARM deployments are incremental: absent resources are not automatically deleted. No workflow logs into Azure or applies resources automatically. Cost, availability and production hardening remain deployment-specific.
 
 References: [Function host identity permissions](https://learn.microsoft.com/azure/azure-functions/manage-connections), [run-from-package identity](https://learn.microsoft.com/azure/azure-functions/run-functions-from-deployment-package), [Front Door private app origins](https://learn.microsoft.com/azure/frontdoor/standard-premium/how-to-enable-private-link-web-app).
+
+Terraform preserves externally managed Storage resource-access entries (`network_rules.private_link_access`), such as entries added by a subscription Defender policy. It still manages public access as disabled, default firewall action as deny, and trusted-service bypass as none. Review such policy-managed entries through your subscription security controls; publisher cleanup must not remove them.

@@ -79,6 +79,11 @@ resource "azurerm_storage_account" "host" {
     default_action = "Deny"
     bypass         = ["None"]
   }
+  # Subscription security services (for example Defender's data scanner) can
+  # manage resource-access entries. Preserve them; public access stays disabled.
+  lifecycle {
+    ignore_changes = [network_rules[0].private_link_access]
+  }
 
   tags = var.tags
 }
@@ -97,6 +102,11 @@ resource "azurerm_storage_account" "catalog" {
   network_rules {
     default_action = "Deny"
     bypass         = ["None"]
+  }
+  # Subscription security services (for example Defender's data scanner) can
+  # manage resource-access entries. Preserve them; public access stays disabled.
+  lifecycle {
+    ignore_changes = [network_rules[0].private_link_access]
   }
 
   tags = var.tags

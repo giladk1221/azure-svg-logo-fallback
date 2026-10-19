@@ -69,3 +69,19 @@ Optional JSON inputs match Terraform: `existing_network`, `private_dns_zone_ids`
 There is no automatic whole-environment delete command. Review the manifest first. Remove only its added Front Door route IDs and origin-group IDs from a shared profile, remove the recorded external catalog reader assignment if present, then delete the dedicated workload RG when its data is no longer needed. In full mode the new Front Door profile is inside that RG. Never delete the shared Front Door RG, referenced network, plan or catalog.
 
 Protect the manifest/config and generated templates like deployment state. They contain code and resource metadata, not intended credentials. Do not mix this installation with Terraform ownership, and do not commit `.deploy/` or your private configuration.
+
+## Regional upload VM capacity
+
+The temporary private publisher defaults to `Standard_B1s`. Set `publisher_vm_size` in the Terraform variables or CLI JSON to an available **x64** size if the region/subscription rejects that SKU. For example, `Standard_B2ls_v2` was available for the West Europe acceptance deployment. Check your subscription before deploying:
+
+```sh
+az vm list-skus --location westeurope --resource-type virtualMachines --size Standard_B --all --query '[?length(restrictions)==`0`].name' -o table
+```
+
+Availability can change. The publisher has no public IP on its NIC and is removed after verification; choosing another size does not change the application architecture.
+
+## Startup and edge propagation
+
+A successful resource deployment does not mean Front Door traffic is ready immediately. The first Functions container image pull and VNet setup can take several minutes. The CLI reports trigger-sync retries. Private Link approval can pass through `Approving`; the helper waits for `Approved` and rechecks state after transient Azure server errors. Rerun the approval command if Azure has not created the matching connection yet.
+
+After approvals, wait for Front Door to propagate its routes, then run the smoke checks. A temporary Front Door `404` with `X-Cache: CONFIG_NOCACHE` and an HTML error page is different from the application’s intentional missing-logo `404` with `X-Logo-Result: explicit-not-found`. Never enable public origin access to work around propagation.

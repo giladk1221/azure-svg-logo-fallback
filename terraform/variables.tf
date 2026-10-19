@@ -62,3 +62,9 @@ variable "tags" {
   type    = map(string)
   default = { purpose = "svg-logo-demo" }
 }
+
+variable "publisher_vm_size" {
+  description = "Temporary upload VM size; choose an available x64 size in the target region."
+  type        = string
+  default     = "Standard_B1s"
+}

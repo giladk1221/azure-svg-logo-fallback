@@ -85,6 +85,7 @@ module "publisher" {
   subnet_id            = module.network.publisher_subnet_id
   create_outbound_nat  = var.existing_network == null
   ssh_public_key       = var.publisher_ssh_public_key
+  vm_size              = var.publisher_vm_size
   host_storage_id      = module.function.host_storage_id
   host_storage_name    = module.function.host_storage_name
   catalog_storage_id   = module.function.catalog_storage_id

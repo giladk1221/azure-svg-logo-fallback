@@ -1,3 +1,7 @@
+variable "vm_size" {
+  type = string
+}
+
 variable "name" {
   type = string
 }
@@ -150,7 +154,7 @@ resource "azurerm_linux_virtual_machine" "publisher" {
   name                            = "${var.name}-publisher"
   resource_group_name             = var.resource_group_name
   location                        = var.location
-  size                            = "Standard_B1s"
+  size                            = var.vm_size
   admin_username                  = "publisher"
   disable_password_authentication = true
   network_interface_ids           = [azurerm_network_interface.publisher.id]

@@ -34,9 +34,30 @@ def approve(items,confirmed):
         matched=[v for v in values if v['properties']['privateLinkServiceConnectionState'].get('description')==origin['request_message']]
         if not matched:raise RuntimeError('No matching connection yet. Wait for Front Door propagation and rerun.')
         for item in matched:
-            status=item['properties']['privateLinkServiceConnectionState']['status'];print(item['id'],status)
-            if confirmed and status=='Pending':az('network','private-endpoint-connection','approve','--id',item['id'],'--description',origin['request_message'])
-            elif status not in ('Pending','Approved'):raise RuntimeError('Unexpected Private Link status; inspect before continuing.')
+            status=item['properties']['privateLinkServiceConnectionState']['status'];print(item['id'],status,flush=True)
+            if status not in ('Pending','Approving','Approved'):raise RuntimeError('Unexpected Private Link status; inspect before continuing.')
+            if not confirmed or status=='Approved':continue
+            if status=='Pending':
+                # App Service approval is asynchronous; send only writable fields.
+                body={'properties':{'privateLinkServiceConnectionState':{'status':'Approved','description':origin['request_message'],'actionsRequired':''}}}
+                for retry in range(6):
+                    try:
+                        az('rest','--method','put','--url','https://management.azure.com'+item['id']+'?api-version=2024-04-01','--body',json.dumps(body));break
+                    except RuntimeError as error:
+                        if 'Internal Server Error' not in str(error) or retry==5:raise
+                        print('Azure approval returned a server error; checking state before retry.',flush=True)
+                        time.sleep(15)
+                        current=rest_get(item['id'],'2024-04-01')['properties']['privateLinkServiceConnectionState']['status']
+                        if current in ('Approved','Approving'):break
+                        if current!='Pending':raise RuntimeError('Unexpected Private Link status: '+current)
+
+            for attempt in range(60):
+                status=rest_get(item['id'],'2024-04-01')['properties']['privateLinkServiceConnectionState']['status']
+                if status=='Approved':
+                    print(item['id'],'Approved',flush=True);break
+                if status not in ('Pending','Approving'):raise RuntimeError('Unexpected Private Link status: '+status)
+                time.sleep(10)
+            else:raise RuntimeError('Private Link approval is still propagating; rerun approve to resume.')
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
@@ -93,9 +114,11 @@ def main():
     action='what-if' if a.action=='plan' else 'create'
     if a.action=='deploy':
         manifest={**(manifest or {}),**info,'ownership':ownership};write(manifest_path,manifest)
+    print('Starting workload '+action+' in '+rg,flush=True)
     result=az('deployment','group',action,'--resource-group',rg,'--name','svg-'+c['name'],'--mode','Incremental','--template-file',str(folder/'workload.json'))
     if a.action=='plan':
         print(json.dumps(result,indent=2));print('This what-if covers the workload. Inspect front-door.preview.json for the edge changes; final edge template uses actual deployed app hostnames.');return
+    print('Workload deployment succeeded.',flush=True)
     previous=manifest or {}
     manifest={**previous,**info,'ownership':ownership};write(manifest_path,manifest)
     if c.get('existing_catalog'):
@@ -105,11 +128,14 @@ def main():
         assignment=az('role','assignment','create','--name',role_name,'--assignee-object-id',principal,'--assignee-principal-type','ServicePrincipal','--role',ROLES['reader'],'--scope',scope)
         manifest['external_reader_role_id']=assignment['id'];write(manifest_path,manifest)
     if c.get('publish_artifacts',True):
+        print('Restarting the Function after private upload.',flush=True)
         az('functionapp','restart','--ids',info['function_id'])
         for attempt in range(20):
+            print('Synchronizing Function triggers (attempt '+str(attempt+1)+'/20).',flush=True)
             try:
                 az('rest','--method','post','--url','https://management.azure.com'+info['function_id']+'/syncfunctiontriggers?api-version=2024-04-01');break
-            except RuntimeError:
+            except RuntimeError as error:
+                print('Function is not ready: '+str(error),flush=True)
                 if attempt==19:raise
                 time.sleep(15)
     if c['mode']!='function_only':
@@ -118,6 +144,7 @@ def main():
         edge,edge_info=front_door(c,origins);write(folder/'front-door.json',edge)
         # Record exact edge IDs before deployment, so a partial failure can be inspected and retried.
         manifest['edge']=edge_info;write(manifest_path,manifest)
+        print('Deploying Front Door resources in '+edge_info['resource_group'],flush=True)
         az('deployment','group','create','--resource-group',edge_info['resource_group'],'--name','svg-edge-'+c['name'],'--mode','Incremental','--template-file',str(folder/'front-door.json'))
         endpoint=rest_get(edge_info['endpoint_id'],'2024-09-01')
         manifest['demo_url']='https://'+endpoint['properties']['hostName']+'/logos/demo';write(manifest_path,manifest)

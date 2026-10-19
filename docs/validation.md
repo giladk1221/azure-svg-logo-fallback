@@ -15,3 +15,19 @@ Neither the revised Terraform architecture nor the Azure CLI templates have comp
 7. Verify Function events in App Insights and remove temporary publisher infrastructure using the chosen tool's cleanup process.
 
 Sample images are fictional. Exact Fastly color parity is not part of the validation claim.
+
+## Repeat the full-demo HTTP acceptance checks
+
+For a fresh catalog seeded with this repository's ACME/CONTOSO fixtures:
+
+```sh
+python3 scripts/acceptance.py https://YOUR-FRONT-DOOR-HOST \
+  --function-host YOUR-FUNCTION.azurewebsites.net \
+  --webapp-host YOUR-WEBAPP.azurewebsites.net \
+  --storage-account YOUR_HOST_STORAGE \
+  --storage-account YOUR_LOGO_STORAGE
+```
+
+This read-only check verifies the Web App and Function routes, byte-for-byte original SVGs, generated `JE`, both `explicit=true` cases, the legacy and forced-fallback paths, real Front Door cache hits for originals and generated images, and direct public-origin rejection. It uses fresh query keys for each run and repeats query variants to detect cache contamination. It requires a cache hit, unlike the shorter smoke helper. It does not upload files, change access rules or purge caches.
+
+Keep control-plane evidence separately: public access disabled, private connections approved, HTTPS/certificate validation enabled, least-privilege managed identity roles, and temporary publisher removal. An anonymous Storage 403 alone does not prove private networking; verify both settings and traffic.

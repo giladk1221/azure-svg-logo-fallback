@@ -2,6 +2,7 @@ mock_provider "azurerm" {}
 mock_provider "azapi" {}
 variables {
   name                 = "svgtest000001"
+  vm_size              = "Standard_B2ls_v2"
   resource_group_name  = "demo"
   location             = "westeurope"
   subnet_id            = "/subscriptions/22222222-2222-2222-2222-222222222222/resourceGroups/demo/providers/Microsoft.Network/virtualNetworks/demo/subnets/publisher"
@@ -20,6 +21,10 @@ variables {
 run "private_publisher_has_scoped_permissions_and_reports_failures" {
   command = plan
   module { source = "./modules/private-publisher" }
+  assert {
+    condition     = azurerm_linux_virtual_machine.publisher.size == "Standard_B2ls_v2"
+    error_message = "Publisher VM size must be configurable for regional availability."
+  }
   assert {
     condition     = azurerm_network_interface.publisher.ip_configuration[0].public_ip_address_id == null && azurerm_linux_virtual_machine.publisher.disable_password_authentication
     error_message = "Publisher must have no public NIC address or password login."
