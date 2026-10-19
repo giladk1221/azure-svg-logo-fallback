@@ -1,0 +1,1 @@
+printenv DEMO_SERVER_B64 | base64 -d > /tmp/svg-demo-server.js && exec node /tmp/svg-demo-server.js

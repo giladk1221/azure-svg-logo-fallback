@@ -4,7 +4,7 @@ The Azure CLI driver manages Front Door routes separately so existing profiles s
 import base64, hashlib, json, re, uuid
 from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
-STARTUP = "node -e \"const http=require('node:http');const m={exports:{}};new Function('require','module','process',Buffer.from(process.env.DEMO_SERVER_B64,'base64').toString())(require,m,process);http.createServer(m.exports).listen(Number(process.env.PORT)||8080,'0.0.0.0')\""
+STARTUP = (ROOT/'webapp/startup-command.txt').read_text().strip()
 ROLES = {'owner':'b7e6dc6d-f1e8-4753-8033-0f276bb0955b','reader':'2a2b9908-6ea1-4ae2-8e65-a410df84e7d1','contributor':'ba92f5b4-2d11-453d-a403-e96b0029c9fe'}
 
 def validate(c):
@@ -90,6 +90,7 @@ def build(c):
     sites=[(n+'-function',fn)]
     if c['mode']=='full':
         web=add('Microsoft.Web/sites',n+'-webapp',{'serverFarmId':plan,'reserved':True,'httpsOnly':True,'publicNetworkAccess':'Disabled','siteConfig':{'linuxFxVersion':'NODE|22-lts','alwaysOn':True,'minTlsVersion':'1.2','scmMinTlsVersion':'1.2','ftpsState':'Disabled','appCommandLine':STARTUP,'appSettings':settings({'DEMO_SERVER_B64':base64.b64encode((ROOT/'webapp/server.js').read_bytes()).decode()})}},api='2024-04-01',location=loc,kind='app,linux',tags=tags,deps=[plan] if not c.get('existing_service_plan_id') else [])
+        add('Microsoft.Web/sites/config',n+'-webapp/logs',{'httpLogs':{'fileSystem':{'enabled':True,'retentionInDays':3,'retentionInMb':100}}},api='2024-04-01',deps=[web])
         sites.append((n+'-webapp',web))
     for name,site in sites:
         for policy in ('ftp','scm'):add('Microsoft.Web/sites/basicPublishingCredentialsPolicies',name+'/'+policy,{'allow':False},api='2024-04-01',deps=[site])

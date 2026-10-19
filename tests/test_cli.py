@@ -115,4 +115,31 @@ class CliTests(unittest.TestCase):
                 self.assertTrue(rendered['resources'])
     def test_invalid_mode_rejected(self):
         with self.assertRaises(ValueError):template.build({**BASE,'mode':'unknown'})
+    def test_cleanup_uses_role_api_for_container_scoped_assignment(self):
+        role='/subscriptions/example/resourceGroups/demo/providers/Microsoft.Storage/storageAccounts/demo/blobServices/default/containers/logos/providers/Microsoft.Authorization/roleAssignments/assignment'
+        self.assertEqual(deploy.cleanup_api(role),'2022-04-01')
+        with self.assertRaises(ValueError):deploy.cleanup_api('/subscriptions/example/resourceGroups/shared')
+    def test_webapp_startup_command_runs_the_embedded_server(self):
+        import base64,os,socket,subprocess,tempfile,time,urllib.request
+        with tempfile.TemporaryDirectory() as folder:
+            with socket.socket() as listener:
+                listener.bind(('127.0.0.1',0));port=listener.getsockname()[1]
+            # Isolate the decoded file while executing the exact shared command.
+            command=template.STARTUP.replace('/tmp/svg-demo-server.js',folder+'/server.js')
+            self.assertNotIn("'",template.STARTUP)  # App Service stripped nested single quotes in the old inline JS.
+            env={**os.environ,'PORT':str(port),'DEMO_SERVER_B64':base64.b64encode((ROOT/'webapp/server.js').read_bytes()).decode()}
+            process=subprocess.Popen(['/bin/sh','-c',command],env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+            try:
+                for attempt in range(100):
+                    if process.poll() is not None:self.fail(process.communicate()[1].decode())
+                    try:
+                        with urllib.request.urlopen('http://127.0.0.1:'+str(port)+'/health',timeout=1) as response:
+                            self.assertEqual(response.status,200)
+                            self.assertEqual(response.headers['X-Demo-Origin'],'webapp')
+                            self.assertEqual(response.read(),b'healthy\n')
+                        break
+                    except OSError:time.sleep(.05)
+                else:self.fail('Web App startup did not serve health requests')
+            finally:
+                process.terminate();process.communicate(timeout=5)
 if __name__=='__main__':unittest.main()

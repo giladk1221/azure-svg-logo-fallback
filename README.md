@@ -58,7 +58,7 @@ python3 azure-cli/deploy.py render --config my-demo.json
 python3 scripts/smoke.py https://YOUR-FRONT-DOOR-HOST
 ```
 
-The deployment methods have automated configuration and behavior tests. They have **not yet completed an Azure end-to-end acceptance deployment**; follow the [validation checklist](docs/validation.md) before production use. No existing customer subscription IDs, credentials or live-resource configuration are committed here.
+Both deployment methods completed an isolated **full-mode Azure acceptance run on 2026-10-19**, with 23 HTTP checks passing per environment, including real Front Door cache hits and direct public-origin rejection. See the [validation results and scope](docs/validation.md); the other two modes have configuration/mocked-plan coverage. No customer subscription IDs, credentials or test-resource state are committed here.
 
 `function/` contains the dependency-free Node.js 22 SVG application, `webapp/` contains the small Node.js Web App example, `assets/logos/` contains fictional sample SVGs, and `scripts/` contains shared packaging/private-upload/smoke helpers.
 

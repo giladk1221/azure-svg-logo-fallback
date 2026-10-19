@@ -91,6 +91,10 @@ resource "azurerm_public_ip" "egress" {
   allocation_method   = "Static"
   sku                 = "Standard"
   tags                = var.tags
+  # Preserve IP tags assigned by the Azure platform or subscription policy.
+  lifecycle {
+    ignore_changes = [ip_tags]
+  }
 }
 
 resource "azurerm_nat_gateway" "publisher" {

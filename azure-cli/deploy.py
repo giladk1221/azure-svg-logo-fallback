@@ -59,6 +59,13 @@ def approve(items,confirmed):
                 time.sleep(10)
             else:raise RuntimeError('Private Link approval is still propagating; rerun approve to resume.')
 
+def cleanup_api(id):
+    value=id.lower()
+    if '/providers/microsoft.authorization/roleassignments/' in value:return '2022-04-01'
+    if '/providers/microsoft.compute/virtualmachines/' in value:return '2024-07-01'
+    if '/providers/microsoft.network/' in value:return '2024-05-01'
+    raise ValueError('Unexpected temporary resource type; refusing cleanup: '+id)
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('action',choices=['render','plan','deploy','approve','cleanup-publisher'])
@@ -93,15 +100,16 @@ def main():
         if not a.yes:return
         subnet=manifest.get('publisher_nat_subnet')
         if subnet:
-            attached=az('network','vnet','subnet','show','--ids',subnet).get('natGateway',{}).get('id')
+            attached=(az('network','vnet','subnet','show','--ids',subnet).get('natGateway') or {}).get('id')
             if attached and attached.lower() not in [x.lower() for x in ids]:raise RuntimeError('Subnet has a different NAT gateway; refusing to detach it.')
             if attached:az('network','vnet','subnet','update','--ids',subnet,'--remove','natGateway')
         for id in ids:
-            try:az('resource','show','--ids',id)
+            api=cleanup_api(id)
+            try:az('resource','show','--ids',id,'--api-version',api)
             except RuntimeError as e:
                 if 'ResourceNotFound' in str(e) or 'NotFound' in str(e):continue
                 raise
-            az('resource','delete','--ids',id)
+            az('resource','delete','--ids',id,'--api-version',api)
         manifest['publisher_resource_ids']=[];manifest['publisher_nat_subnet']=None;write(manifest_path,manifest)
         print('Publisher removed. Set publish_artifacts=false in the config to avoid recreating it on next deployment.');return
     preflight(c,folder)

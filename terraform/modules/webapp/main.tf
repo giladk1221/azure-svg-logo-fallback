@@ -18,7 +18,15 @@ resource "azurerm_linux_web_app" "demo" {
     scm_minimum_tls_version = "1.2"
     ftps_state              = "Disabled"
     application_stack { node_version = "22-lts" }
-    app_command_line = "node -e \"const http=require('node:http');const m={exports:{}};new Function('require','module','process',Buffer.from(process.env.DEMO_SERVER_B64,'base64').toString())(require,m,process);http.createServer(m.exports).listen(Number(process.env.PORT)||8080,'0.0.0.0')\""
+    app_command_line = trimspace(file("${path.module}/../../../webapp/startup-command.txt"))
+  }
+  logs {
+    http_logs {
+      file_system {
+        retention_in_days = 3
+        retention_in_mb   = 100
+      }
+    }
   }
   app_settings = { DEMO_SERVER_B64 = filebase64("${path.module}/../../../webapp/server.js") }
   tags         = var.tags

@@ -2,7 +2,28 @@
 
 GitHub Actions runs Function/Web App behavior tests, deterministic packaging/private-publisher tests, Azure CLI template and ownership tests, Terraform provider validation and mocked plans for the three deployment modes. These checks need no Azure credentials and create no Azure resources.
 
-Neither the revised Terraform architecture nor the Azure CLI templates have completed an Azure end-to-end acceptance deployment. Mocked plans and offline ARM inspection do not verify regional capacity, tenant policy, private DNS, package startup, Private Link approval or edge propagation. Azure CLI `plan` adds a real workload what-if in the target subscription but is not a live traffic test.
+On **2026-10-19**, the **full** mode was deployed and tested in two isolated West Europe environments: one created with Terraform and one with Azure CLI/ARM. Both passed the 23-check HTTP acceptance suite. The existing demo was preserved; its resource inventory was unchanged, its activity log showed no writes/deletions during the test, and its demo page continued returning HTTP 200.
+
+| Live check | Terraform | Azure CLI |
+|---|---|---|
+| Private Web App at `/`, Function demo and health routes | Pass | Pass |
+| ACME/CONTOSO original SVG bytes match stored fixtures | Pass | Pass |
+| Missing JEMXX generates `JE` SVG, HTTP 200 | Pass | Pass |
+| Missing + `explicit=true`: 404/no-store; existing + explicit: original 200 | Pass | Pass |
+| Legacy path and forced-fallback path | Pass | Pass |
+| Real `TCP_HIT` for originals and generated SVGs; query variants stay separate | Pass | Pass |
+| Direct public Function, Web App and both Storage endpoints return 403 | Pass | Pass |
+| Public access disabled; approved Private Link; HTTPS certificate validation | Pass | Pass |
+| Function identity scoped to host Storage and catalog container | Pass | Pass |
+| Original/missing/generated/suppressed events in Application Insights | Pass | Pass |
+| Publisher roles, VM/disk, NIC/NSG and NAT/IP removed | Pass | Pass |
+| Full 23-check suite repeated after publisher cleanup | Pass | Pass |
+
+The local regression suite contains **46 passing checks**: 18 Node tests, 18 Python tests and 10 Terraform mocked scenarios.
+
+The run exposed and corrected regional upload-VM availability, App Service startup quoting, asynchronous Private Link approval handling, scoped-role cleanup API selection, and Terraform drift from platform/policy-managed properties. New templates include those fixes. The Function application logic did not need changes.
+
+This run tested **full mode with both tools**. Existing-Front-Door and Function-only modes have configuration/mocked-plan coverage, but were not separately deployed in this acceptance run. Customer DNS/custom domains, load/failover testing, live catalog-outage injection and new-original replacement after TTL expiry remain outside this result. Mocked plans alone do not prove cloud behavior, and Azure CLI `plan` is a workload what-if rather than a live traffic test.
 
 ## Acceptance checks for each deployment method
 
