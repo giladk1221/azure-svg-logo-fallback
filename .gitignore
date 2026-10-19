@@ -15,3 +15,7 @@ __pycache__/
 *.pem
 *.key
 .DS_Store
+
+.deploy/
+my-demo.json
+*.local.json

@@ -29,8 +29,7 @@ The lookup has an eight-second request timeout and 128 KiB response limit. Manag
 - Generated SVG: `Cache-Control: public, max-age=60` so newly added originals appear after a short TTL.
 - Explicit 404, invalid requests, health, demo HTML and errors: `no-store`.
 - The optional Front Door route uses `UseQueryString`. A cached normal placeholder must never answer an `explicit=true` request.
-- APIM adds no response-cache policy. An APIM-only deployment still has browser caching but no Front Door edge cache.
-- Review inherited APIM policies: do not discard `explicit`, normalize its value, cache `no-store`, or override these TTLs accidentally.
+- Review existing Front Door rule sets: do not discard `explicit`, normalize its value, cache `no-store`, or override these TTLs accidentally.
 
 `X-Logo-Result` identifies `original`, `fallback`, `explicit-not-found`, or `origin-error`. A Front Door hit returns the cached result without invoking the Function. `X-Cache`/`Age` can help observe caching, but a single request or POP does not guarantee a HIT. To publish a replacement immediately, purge the relevant Front Door path; otherwise wait for the TTL. A new generated result is computed per miss and is not written back to Storage.
 

@@ -1,17 +1,17 @@
 # Validation scope
 
-The repository includes local Function tests, deterministic packaging, Terraform formatting/provider validation, mocked infrastructure plans and a post-deployment HTTP smoke script. GitHub Actions runs the local checks without Azure credentials.
+GitHub Actions runs Function/Web App behavior tests, deterministic packaging/private-publisher tests, Azure CLI template and ownership tests, Terraform provider validation and mocked plans for the three deployment modes. These checks need no Azure credentials and create no Azure resources.
 
-Mocked plans do not create Azure resources. They verify configuration branches and security invariants, not Azure regional capacity, tenant policies, private DNS routing, APIM token issuance, package startup or Front Door propagation. The APIM/Terraform architecture in this repository must pass a real deployment acceptance run in the customer's chosen subscription before being considered validated end to end.
+Neither the revised Terraform architecture nor the Azure CLI templates have completed an Azure end-to-end acceptance deployment. Mocked plans and offline ARM inspection do not verify regional capacity, tenant policy, private DNS, package startup, Private Link approval or edge propagation. Azure CLI `plan` adds a real workload what-if in the target subscription but is not a live traffic test.
 
-## Azure acceptance checklist
+## Acceptance checks for each deployment method
 
-1. Full demo: apply, approve the exact Front Door Private Link request, run smoke checks, disable APIM public access, rerun checks, and confirm direct public APIM/Function/Storage access is blocked.
-2. Existing APIM: verify private DNS and routing from the gateway, check the new paths do not collide, and ensure inherited policies do not change the query/cache behavior. Run the smoke script with actual catalog keys.
-3. Function only: call from a connected private runner using an authorized identity. Confirm a different identity and an unauthenticated request cannot access the Function.
-4. Observe stored originals, normal generated SVGs, original+explicit=200, missing+explicit=404/no-store and no mixing across the Front Door cache key.
-5. Add a new original for a previously missing symbol and verify it replaces the generated image after TTL expiry or a scoped purge.
-6. Confirm catalog access errors produce 502/no-store, not a placeholder. Use a separate sandbox for failure injection.
-7. Verify structured Function events in App Insights and remove the optional publisher with a second apply.
+1. Full demo: deploy, approve the Function and Web App Private Link requests, run smoke checks through Front Door, and confirm `/` comes from the Web App while `/logos/demo` comes from the Function.
+2. Existing Front Door: verify Premium tier, inspect path conflicts, deploy only the added logo resources, approve the connection, and confirm existing routes/WAF remain intact.
+3. Function only: connect the output Function to a Premium private origin in the owning stack, approve it, then test through Front Door. A public Function URL is intentionally inaccessible.
+4. In every mode, confirm existing+explicit=200, missing=generated SVG 200, missing+explicit=404/no-store, and no mixing across cache keys. Direct public app/Storage access must remain blocked.
+5. Add a new original for a previously missing symbol and verify replacement after TTL expiry or a scoped purge.
+6. In an isolated sandbox, verify catalog failures give 502/no-store rather than a generated placeholder. Do not inject failures into a shared customer catalog.
+7. Verify Function events in App Insights and remove temporary publisher infrastructure using the chosen tool's cleanup process.
 
-Do not run destructive or outage-injection tests against an existing shared gateway or customer catalog.
+Sample images are fictional. Exact Fastly color parity is not part of the validation claim.

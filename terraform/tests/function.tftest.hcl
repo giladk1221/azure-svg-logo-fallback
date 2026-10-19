@@ -1,33 +1,26 @@
 mock_provider "azurerm" {}
-mock_provider "azuread" {}
 mock_provider "azapi" {}
 variables {
   name                       = "svgtest000001"
   resource_group_name        = "demo"
   location                   = "westeurope"
-  tenant_id                  = "11111111-1111-1111-1111-111111111111"
   integration_subnet_id      = "/subscriptions/22222222-2222-2222-2222-222222222222/resourceGroups/shared/providers/Microsoft.Network/virtualNetworks/shared/subnets/functions"
   private_endpoint_subnet_id = "/subscriptions/22222222-2222-2222-2222-222222222222/resourceGroups/shared/providers/Microsoft.Network/virtualNetworks/shared/subnets/endpoints"
   private_dns_zone_ids = {
-    blob  = "/subscriptions/22222222-2222-2222-2222-222222222222/resourceGroups/shared/providers/Microsoft.Network/privateDnsZones/privatelink.blob.core.windows.net"
-    sites = "/subscriptions/22222222-2222-2222-2222-222222222222/resourceGroups/shared/providers/Microsoft.Network/privateDnsZones/privatelink.azurewebsites.net"
+    blob = "/subscriptions/22222222-2222-2222-2222-222222222222/resourceGroups/shared/providers/Microsoft.Network/privateDnsZones/privatelink.blob.core.windows.net"
   }
-  plan_sku                     = "B1"
-  allowed_caller_principal_ids = ["33333333-3333-3333-3333-333333333333"]
-  package_name                 = "test.zip"
-  tags                         = {}
+  plan_sku     = "B1"
+  package_name = "test.zip"
+  tags         = {}
 }
 run "private_function_identity_and_storage" {
   command = plan
   module { source = "./modules/logo-function" }
   assert {
-    condition     = !azurerm_linux_function_app.demo.public_network_access_enabled && azurerm_linux_function_app.demo.auth_settings_v2[0].require_authentication
-    error_message = "Function must be private and require authentication."
+    condition     = !azurerm_linux_function_app.demo.public_network_access_enabled && azurerm_linux_function_app.demo.https_only
+    error_message = "Function must have public access disabled and require HTTPS."
   }
-  assert {
-    condition     = toset(azurerm_linux_function_app.demo.auth_settings_v2[0].active_directory_v2[0].allowed_identities) == toset(var.allowed_caller_principal_ids)
-    error_message = "Function must restrict access to the supplied caller identities."
-  }
+
   assert {
     condition     = !azurerm_storage_account.host.shared_access_key_enabled && !azurerm_storage_account.host.public_network_access_enabled && !azurerm_storage_account.catalog[0].public_network_access_enabled
     error_message = "Both stores must remain private, with no host shared-key auth."
@@ -41,8 +34,7 @@ run "reuse_catalog_and_plan" {
   command = plan
   module { source = "./modules/logo-function" }
   variables {
-    existing_service_plan_id      = "/subscriptions/22222222-2222-2222-2222-222222222222/resourceGroups/shared/providers/Microsoft.Web/serverFarms/shared"
-    backend_application_client_id = "44444444-4444-4444-4444-444444444444"
+    existing_service_plan_id = "/subscriptions/22222222-2222-2222-2222-222222222222/resourceGroups/shared/providers/Microsoft.Web/serverFarms/shared"
     existing_catalog = {
       account_id     = "/subscriptions/22222222-2222-2222-2222-222222222222/resourceGroups/shared/providers/Microsoft.Storage/storageAccounts/customerlogos"
       account_name   = "customerlogos"
@@ -50,7 +42,7 @@ run "reuse_catalog_and_plan" {
     }
   }
   assert {
-    condition     = length(azurerm_storage_account.catalog) == 0 && length(azurerm_service_plan.demo) == 0 && length(azuread_application.backend) == 0 && length(azapi_resource.logos) == 0
+    condition     = length(azurerm_storage_account.catalog) == 0 && length(azurerm_service_plan.demo) == 0 && length(azapi_resource.logos) == 0
     error_message = "Reused components must not be created or taken over."
   }
   assert {

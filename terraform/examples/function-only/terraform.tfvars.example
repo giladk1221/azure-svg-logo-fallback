@@ -1,10 +1,11 @@
 subscription_id = "00000000-0000-0000-0000-000000000000" # REPLACE
-name_prefix = "svgfunction"
+name_prefix = "svgdemo"
 location = "westeurope"
 mode = "function_only"
-# OBJECT/principal ID, not client ID. The calling gateway must have private connectivity.
-allowed_caller_principal_ids = ["00000000-0000-0000-0000-000000000000"] # REPLACE
-# Reuse existing_network / private_dns_zone_ids / existing_catalog / existing_service_plan_id
-# as in the existing-apim example to minimize new components.
 publish_artifacts = true
-publisher_ssh_public_key = "ssh-ed25519 REPLACE_WITH_YOUR_PUBLIC_KEY"
+publisher_ssh_public_key = "ssh-ed25519 REPLACE_WITH_PUBLIC_KEY"
+# Optional reuse (both non-full modes can reuse the same types of dependencies):
+# existing_service_plan_id = "/subscriptions/.../providers/Microsoft.Web/serverfarms/..."
+# existing_catalog = { account_id = "/subscriptions/.../providers/Microsoft.Storage/storageAccounts/...", account_name = "youraccount", container_name = "logos" }
+# existing_network = { vnet_id = "...", function_subnet_id = "...", private_endpoint_subnet_id = "...", publisher_subnet_id = "..." }
+# private_dns_zone_ids = { blob = "..." }

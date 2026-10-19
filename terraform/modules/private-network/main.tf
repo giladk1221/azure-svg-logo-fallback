@@ -14,10 +14,6 @@ variable "create_network" {
   type = bool
 }
 
-variable "create_apim_subnet" {
-  type = bool
-}
-
 variable "existing_network" {
   type    = any
   default = null
@@ -33,8 +29,8 @@ variable "tags" {
 
 locals {
   zones = {
-    blob  = "privatelink.blob.core.windows.net",
-    sites = "privatelink.azurewebsites.net"
+    blob = "privatelink.blob.core.windows.net",
+
   }
 
   create_zones = {
@@ -43,16 +39,7 @@ locals {
   }
 
   vnet_id = var.create_network ? azurerm_virtual_network.demo[0].id : var.existing_network.vnet_id
-  subnets = merge({
-    function  = "10.84.1.0/24",
-    endpoints = "10.84.2.0/24",
-    publisher = "10.84.3.0/27"
-    }
-    , var.create_apim_subnet ? {
-      apim = "10.84.4.0/24"
-      } : {
-    }
-  )
+  subnets = { function = "10.84.1.0/24", endpoints = "10.84.2.0/24", publisher = "10.84.3.0/27" }
 }
 
 resource "azurerm_virtual_network" "demo" {
@@ -75,7 +62,7 @@ resource "azurerm_subnet" "demo" {
   private_endpoint_network_policies = "Disabled"
   default_outbound_access_enabled   = false
   dynamic "delegation" {
-    for_each = contains(["function", "apim"], each.key) ? [1] : []
+    for_each = each.key == "function" ? [1] : []
     content {
       name = "web"
       service_delegation {
@@ -84,31 +71,6 @@ resource "azurerm_subnet" "demo" {
       }
     }
   }
-}
-
-resource "azurerm_network_security_group" "apim" {
-  count               = var.create_network && var.create_apim_subnet ? 1 : 0
-  name                = "${var.name}-apim-nsg"
-  location            = var.location
-  resource_group_name = var.resource_group_name
-  tags                = var.tags
-  security_rule {
-    name                       = "AllowKeyVault"
-    priority                   = 100
-    direction                  = "Outbound"
-    access                     = "Allow"
-    protocol                   = "Tcp"
-    source_port_range          = "*"
-    destination_port_range     = "443"
-    source_address_prefix      = "VirtualNetwork"
-    destination_address_prefix = "AzureKeyVault"
-  }
-}
-
-resource "azurerm_subnet_network_security_group_association" "apim" {
-  count                     = var.create_network && var.create_apim_subnet ? 1 : 0
-  subnet_id                 = azurerm_subnet.demo["apim"].id
-  network_security_group_id = azurerm_network_security_group.apim[0].id
 }
 
 resource "azurerm_private_dns_zone" "demo" {
@@ -137,11 +99,6 @@ output "private_endpoint_subnet_id" {
 
 output "publisher_subnet_id" {
   value = var.create_network ? azurerm_subnet.demo["publisher"].id : try(var.existing_network.publisher_subnet_id, null)
-}
-
-output "apim_subnet_id" {
-  value      = try(azurerm_subnet.demo["apim"].id, null)
-  depends_on = [azurerm_subnet_network_security_group_association.apim]
 }
 
 output "private_dns_zone_ids" {

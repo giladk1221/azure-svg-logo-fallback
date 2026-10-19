@@ -1,0 +1,12 @@
+subscription_id = "00000000-0000-0000-0000-000000000000" # REPLACE
+name_prefix = "svgdemo"
+location = "westeurope"
+mode = "existing_front_door"
+publish_artifacts = true
+publisher_ssh_public_key = "ssh-ed25519 REPLACE_WITH_PUBLIC_KEY"
+existing_front_door = { profile_name = "your-premium-profile", resource_group_name = "your-edge-rg", endpoint_name = "your-endpoint" }
+# Optional reuse (both non-full modes can reuse the same types of dependencies):
+# existing_service_plan_id = "/subscriptions/.../providers/Microsoft.Web/serverfarms/..."
+# existing_catalog = { account_id = "/subscriptions/.../providers/Microsoft.Storage/storageAccounts/...", account_name = "youraccount", container_name = "logos" }
+# existing_network = { vnet_id = "...", function_subnet_id = "...", private_endpoint_subnet_id = "...", publisher_subnet_id = "..." }
+# private_dns_zone_ids = { blob = "..." }

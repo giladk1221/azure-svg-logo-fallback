@@ -1,0 +1,13 @@
+{
+  "subscription_id": "00000000-0000-0000-0000-000000000000",
+  "name": "svgdemo123456",
+  "mode": "existing_front_door",
+  "location": "westeurope",
+  "publish_artifacts": true,
+  "publisher_ssh_public_key": "ssh-ed25519 REPLACE_WITH_PUBLIC_KEY",
+  "existing_front_door": {
+    "profile_name": "your-premium-profile",
+    "resource_group_name": "your-edge-rg",
+    "endpoint_name": "your-endpoint"
+  }
+}

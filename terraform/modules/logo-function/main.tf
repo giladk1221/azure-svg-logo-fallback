@@ -10,10 +10,6 @@ variable "resource_group_name" {
   type = string
 }
 
-variable "tenant_id" {
-  type = string
-}
-
 variable "integration_subnet_id" {
   type = string
 }
@@ -40,15 +36,6 @@ variable "existing_catalog" {
   default = null
 }
 
-variable "backend_application_client_id" {
-  type    = string
-  default = null
-}
-
-variable "allowed_caller_principal_ids" {
-  type = list(string)
-}
-
 variable "package_name" {
   type = string
 }
@@ -61,8 +48,6 @@ locals {
   catalog_id   = var.existing_catalog == null ? azurerm_storage_account.catalog[0].id : var.existing_catalog.account_id
   catalog_name = var.existing_catalog == null ? azurerm_storage_account.catalog[0].name : var.existing_catalog.account_name
   container    = var.existing_catalog == null ? "logos" : var.existing_catalog.container_name
-  client_id    = var.backend_application_client_id == null ? azuread_application.backend[0].client_id : var.backend_application_client_id
-  audience     = "api://${local.client_id}"
   endpoints = merge({
     blob = azurerm_storage_account.host.id,
     }
@@ -178,23 +163,6 @@ resource "azurerm_role_assignment" "catalog_reader" {
   depends_on                       = [azapi_resource.logos]
 }
 
-resource "azuread_application" "backend" {
-  count            = var.backend_application_client_id == null ? 1 : 0
-  display_name     = "${var.name}-logo-api"
-  sign_in_audience = "AzureADMyOrg"
-}
-
-resource "azuread_application_identifier_uri" "backend" {
-  count          = var.backend_application_client_id == null ? 1 : 0
-  application_id = azuread_application.backend[0].id
-  identifier_uri = local.audience
-}
-
-resource "azuread_service_principal" "backend" {
-  count     = var.backend_application_client_id == null ? 1 : 0
-  client_id = azuread_application.backend[0].client_id
-}
-
 resource "azurerm_log_analytics_workspace" "demo" {
   name                = "${var.name}-logs"
   location            = var.location
@@ -264,53 +232,8 @@ resource "azurerm_linux_function_app" "demo" {
     WEBSITE_RUN_FROM_PACKAGE_BLOB_MI_RESOURCE_ID = azurerm_user_assigned_identity.function.id
   }
 
-  auth_settings_v2 {
-    auth_enabled           = true
-    require_authentication = true
-    unauthenticated_action = "Return401"
-    default_provider       = "azureactivedirectory"
-    require_https          = true
-    active_directory_v2 {
-      client_id            = local.client_id
-      tenant_auth_endpoint = "https://login.microsoftonline.com/${var.tenant_id}/v2.0"
-      allowed_audiences    = [local.audience, local.client_id]
-      allowed_identities   = var.allowed_caller_principal_ids
-    }
-
-    login {
-      token_store_enabled = false
-    }
-  }
-
-  lifecycle {
-    precondition {
-      condition     = length(var.allowed_caller_principal_ids) > 0
-      error_message = "At least one gateway/caller identity must be explicitly authorized."
-    }
-  }
-
-  depends_on = [azurerm_role_assignment.host, azurerm_role_assignment.catalog_reader, azurerm_private_endpoint.storage, azuread_application_identifier_uri.backend, azuread_service_principal.backend]
+  depends_on = [azurerm_role_assignment.host, azurerm_role_assignment.catalog_reader, azurerm_private_endpoint.storage]
   tags       = var.tags
-}
-
-resource "azurerm_private_endpoint" "function" {
-  name                = "${var.name}-function-pe"
-  location            = var.location
-  resource_group_name = var.resource_group_name
-  subnet_id           = var.private_endpoint_subnet_id
-  private_service_connection {
-    name                           = "function"
-    private_connection_resource_id = azurerm_linux_function_app.demo.id
-    subresource_names              = ["sites"]
-    is_manual_connection           = false
-  }
-
-  private_dns_zone_group {
-    name                 = "default"
-    private_dns_zone_ids = [var.private_dns_zone_ids["sites"]]
-  }
-
-  tags = var.tags
 }
 
 output "name" {
@@ -319,10 +242,6 @@ output "name" {
 
 output "hostname" {
   value = azurerm_linux_function_app.demo.default_hostname
-}
-
-output "backend_audience" {
-  value = local.audience
 }
 
 output "host_storage_id" {
@@ -344,3 +263,4 @@ output "catalog_storage_name" {
 output "id" {
   value = azurerm_linux_function_app.demo.id
 }
+output "service_plan_id" { value = azurerm_linux_function_app.demo.service_plan_id }

@@ -28,6 +28,7 @@ def upload(account, container, name, data, content_type, identity):
             print('Uploaded '+container+'/'+name, flush=True)
             return
         except urllib.error.HTTPError as e:
+            e.close()
             if e.code == 412:
                 with urllib.request.urlopen(urllib.request.Request(url,headers=headers),timeout=60) as r:
                     existing = r.read(len(data)+1)
