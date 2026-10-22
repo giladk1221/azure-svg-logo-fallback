@@ -26,7 +26,7 @@ az account set --subscription YOUR_SUBSCRIPTION_ID
 az account show --query '{subscription:id,name:name}' -o table
 ```
 
-The subscription must allow these resource providers: `Microsoft.Web`, `Microsoft.Storage`, `Microsoft.Network`, `Microsoft.ManagedIdentity`, `Microsoft.Insights` and `Microsoft.OperationalInsights`. Also allow `Microsoft.Compute` when using the temporary uploader, and `Microsoft.Cdn` when deploying Front Door. If registration is restricted, ask the subscription administrator to register them. Terraform may attempt provider registration; that can require subscription-level permissions.
+The subscription must allow these resource providers: `Microsoft.Web`, `Microsoft.Storage`, `Microsoft.Network`, `Microsoft.Compute`, `Microsoft.ManagedIdentity`, `Microsoft.Insights`, `Microsoft.OperationalInsights` and `Microsoft.Cdn`. If registration is restricted, ask the subscription administrator to register them. Terraform may attempt provider registration; that can require subscription-level permissions.
 
 ## 3. Prepare the private uploader
 
@@ -56,7 +56,7 @@ Keep `publish_artifacts=true` for the first deployment unless using your own [pr
 - [Terraform](terraform.md): state-managed deployment and teardown.
 - [Azure CLI](azure-cli.md): Python generates ARM JSON and Azure CLI deploys it; no Terraform, Bicep or Python Azure SDK.
 
-Both tools offer `full`, `logo_only`, `existing_front_door` and `function_only`. For separately owned optional components, see [component deployment](components.md). Defaults create a VNet at `10.84.0.0/16`, separate private host/catalog Storage accounts, a managed identity and monitoring. See [resource reuse](existing-front-door.md#reuse-existing-dependencies) for existing network, plan or catalog prerequisites.
+Both tools offer `full`, `existing_front_door` and `function_only`. Defaults create a VNet at `10.84.0.0/16`, separate private host/catalog Storage accounts, a managed identity and monitoring. See [resource reuse](existing-front-door.md#reuse-existing-dependencies) for existing network, plan or catalog prerequisites.
 
 ## Private runner alternative
 
@@ -72,4 +72,4 @@ az functionapp restart --resource-group WORKLOAD_RG --name FUNCTION_NAME
 az rest --method post --url 'https://management.azure.com/subscriptions/SUBSCRIPTION_ID/resourceGroups/WORKLOAD_RG/providers/Microsoft.Web/sites/FUNCTION_NAME/syncfunctiontriggers?api-version=2024-04-01'
 ```
 
-The publisher uses Azure CLI credentials, or `--identity` for a VM system identity. It checks private DNS and refuses to overwrite different existing content. Do not seed a customer's existing catalog. After a package change, update `WEBSITE_RUN_FROM_PACKAGE` in the owning Terraform/ARM configuration to the new `logo-<sha256>.zip` URL before restarting/syncing; the publisher prints the uploaded blob name. Restarting alone keeps the previous URL. Repeat upload/update/restart/sync after package changes; remove temporary runner permissions when finished.
+The publisher uses Azure CLI credentials, or `--identity` for a VM system identity. It checks private DNS and refuses to overwrite different existing content. Do not seed a customer's existing catalog. Repeat upload/restart/sync after package changes; remove temporary runner permissions when finished.

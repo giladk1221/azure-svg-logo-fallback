@@ -1,5 +1,0 @@
-subscription_id = "00000000-0000-0000-0000-000000000000"
-name            = "svgsite123456" # Choose a globally unique name.
-location        = "westeurope"
-# Optional compatible Linux Basic-or-higher plan in this region:
-# existing_service_plan_id = "/subscriptions/.../resourceGroups/.../providers/Microsoft.Web/serverfarms/..."

@@ -4,7 +4,7 @@
 
 This records a completed acceptance run. Validation environments are temporary; deploy your own instance with the [Terraform](terraform.md) or [Azure CLI](azure-cli.md) guide to repeat the tests. The original demonstration environment is managed separately from this repository.
 
-GitHub Actions runs Function/Web App behavior tests, deterministic packaging/private-publisher tests, Azure CLI template and ownership tests, Terraform provider validation and mocked plans for the four combined deployment modes and separate website/Front Door stacks. These checks need no Azure credentials and create no Azure resources.
+GitHub Actions runs Function/Web App behavior tests, deterministic packaging/private-publisher tests, Azure CLI template and ownership tests, Terraform provider validation and mocked plans for the three deployment modes. These checks need no Azure credentials and create no Azure resources.
 
 On **2026-10-19**, the **full** mode was deployed and tested in two isolated West Europe environments: one created with Terraform and one with Azure CLI/ARM. Both passed the 23-check HTTP acceptance suite. The existing demo was preserved; its resource inventory was unchanged, its activity log showed no writes/deletions during the test, and its demo page continued returning HTTP 200.
 
@@ -27,7 +27,7 @@ The local regression suite contains **46 passing checks**: 18 Node tests, 18 Pyt
 
 The run exposed and corrected regional upload-VM availability, App Service startup quoting, asynchronous Private Link approval handling, scoped-role cleanup API selection, and Terraform drift from platform/policy-managed properties. New templates include those fixes. The Function application logic did not need changes.
 
-This run tested **full mode with both tools**. Existing-Front-Door and Function-only modes have configuration/mocked-plan coverage, but were not separately deployed in this acceptance run. The later `logo_only` mode and standalone website/Front Door stacks also have offline coverage only; the 2026-10-19 live results do not apply to those new combinations. Customer DNS/custom domains, load/failover testing, live catalog-outage injection and new-original replacement after TTL expiry remain outside this result. Mocked plans alone do not prove cloud behavior, and Azure CLI `plan` is a workload what-if rather than a live traffic test.
+This run tested **full mode with both tools**. Existing-Front-Door and Function-only modes have configuration/mocked-plan coverage, but were not separately deployed in this acceptance run. Customer DNS/custom domains, load/failover testing, live catalog-outage injection and new-original replacement after TTL expiry remain outside this result. Mocked plans alone do not prove cloud behavior, and Azure CLI `plan` is a workload what-if rather than a live traffic test.
 
 ## Acceptance checks for each deployment method
 

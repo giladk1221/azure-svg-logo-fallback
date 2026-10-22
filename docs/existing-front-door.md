@@ -19,8 +19,6 @@ Before applying:
 
 ## Function-only
 
-Start with the [Function-only quick start](function-only.md). To provision the edge separately after the Function exists, use the [standalone integration stack](components.md#add-front-door-to-an-existing-function); the manual steps below remain available.
-
 Use `function_only` when the customer's existing infrastructure code will own the Front Door integration. This creates the Function and its dependencies, with **no** Front Door profile, endpoint, route or Web App.
 
 After deploying, get `function_id` and the actual Function hostname from Terraform outputs or the CLI manifest/Azure lookup described in your tool guide. In the Azure portal, open the existing **Front Door Premium** profile and its **Front Door manager**, or apply the equivalent settings through its owning infrastructure stack.

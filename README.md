@@ -2,24 +2,15 @@
 
 Serve an existing SVG logo from private Storage, or generate a two-character SVG when the logo is missing. Azure Front Door Premium caches the result; an Azure Function performs the lookup and fallback. The full demo also includes a private Web App as a separate origin.
 
-**Deploy with Terraform or Azure CLI. Both support the same four combined options. No APIM is involved.**
+**Deploy with Terraform or Azure CLI. Both support the same three options. No APIM is involved.**
 
-## Just need the Function App?
-
-Start with **[Function-only quick start](docs/function-only.md)**: copy the supplied
-config, fill four values, preview and deploy. No Front Door, Web App or APIM is
-created. Required Storage, identity and private networking stay with the Function.
-Already have a prepared Function App? Use [code-only publishing](docs/function-only.md#publish-code-only-to-an-existing-function-app).
-
-For optional components and adding them later without replacing existing apps,
-see **[Deploy the parts you need](docs/components.md)**.
+**Only need the Function App?** Follow the [Function-only quick start](docs/function-only.md). It uses the existing deployment mode and keeps its required dependencies together.
 
 ## Choose what to deploy
 
 | Option | What you get | When to choose it |
 |---|---|---|
 | **Full demo** (`full`) | New Front Door Premium + WAF, Function, two private Storage accounts, network, identity, monitoring and Web App | Try the complete flow in a separate environment |
-| **Logo demo only** (`logo_only`) | Function and dependencies + new Front Door Premium/WAF; no Web App | Test the logo flow at `/logos/demo` without the sample website |
 | **Existing Front Door** (`existing_front_door`) | Private Function and dependencies, plus a new logo route/origin on your existing Premium endpoint | You already have Front Door and want the integration deployed for you |
 | **Function only** (`function_only`) | Private Function and dependencies; no Front Door or Web App | Your team will connect the Function using its own Front Door configuration |
 
@@ -28,7 +19,7 @@ Network, Linux App Service plan and private logo catalog can be reused. “Funct
 ### Start deploying
 
 1. Complete the short **[prerequisites and setup](docs/deployment.md)**.
-2. Follow **[Terraform: five steps](docs/terraform.md)** or **[Azure CLI: five steps](docs/azure-cli.md)**. Each guide covers all four combined options.
+2. Follow **[Terraform: five steps](docs/terraform.md)** or **[Azure CLI: five steps](docs/azure-cli.md)**. Each guide covers all three options.
 3. Open `/logos/demo` and follow **[test the flow](docs/testing.md)**.
 4. Remove the temporary uploader using the last step in your deployment guide.
 
@@ -65,10 +56,10 @@ The demo seeds fictional **ACME** and **CONTOSO** logos in a new catalog. Reused
 | Location | Contents |
 |---|---|
 | [`function/`](function/) | Dependency-free Node.js 22 Function, SVG renderer and demo page |
-| [`webapp/`](webapp/) | Optional sample website, included in the full demo or deployed separately |
+| [`webapp/`](webapp/) | Small website used only by the full demo |
 | [`assets/logos/`](assets/logos/) | Fictional original SVG fixtures |
-| [`terraform/`](terraform/) | Terraform modules, four combined presets and separate website/edge stacks |
-| [`azure-cli/`](azure-cli/) | Python/ARM deployment driver and four JSON examples; no Terraform or Bicep required |
+| [`terraform/`](terraform/) | Terraform modules and three example configurations |
+| [`azure-cli/`](azure-cli/) | Python/ARM deployment driver and three JSON examples; no Terraform or Bicep required |
 | [`scripts/`](scripts/) | Packaging, private upload, Private Link approval and HTTP checks |
 | [`tests/`](tests/) | Local application and deployment tests |
 | [`docs/`](docs/) | Setup, deployment, integration, testing and security guides |
@@ -77,5 +68,5 @@ The demo seeds fictional **ACME** and **CONTOSO** logos in a new catalog. Reused
 
 - **Private origins:** Function, Web App and Storage disable public network access. Front Door serves the public logo URLs. Storage browsing from a laptop also needs private network access and Blob data permissions.
 - **Costs:** Front Door Premium, the App Service plan and other Azure resources remain billable until deleted. The temporary upload VM/NAT is removed after deployment; it is not part of the request flow.
-- **Validation:** Both tools passed a full-mode Azure deployment and 23 HTTP acceptance checks per environment on 2026-10-19. The validation environments are temporary, not permanent demo sites. Existing-Front-Door, Function-only, Logo-only and standalone component stacks have configuration/mocked-plan coverage; the new partial combinations have not been live-deployed. Read the [validation scope](docs/validation.md).
+- **Validation:** Both tools passed a full-mode Azure deployment and 23 HTTP acceptance checks per environment on 2026-10-19. The validation environments are temporary, not permanent demo sites. Existing-Front-Door and Function-only modes have configuration/mocked-plan coverage. Read the [validation scope](docs/validation.md).
 - **Scope:** This is a working SVG migration demo, not a production sizing/HA design, DNS migration tool or photo converter. Review [security and operations](docs/security.md) before production use.

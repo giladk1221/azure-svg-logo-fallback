@@ -68,7 +68,7 @@ module "front_door" {
   source              = "./modules/front-door"
   name                = local.name
   resource_group_name = azurerm_resource_group.demo.name
-  create_profile      = contains(["full", "logo_only"], var.mode)
+  create_profile      = var.mode == "full"
   existing_front_door = var.existing_front_door
   function_id         = module.function.id
   function_hostname   = module.function.hostname

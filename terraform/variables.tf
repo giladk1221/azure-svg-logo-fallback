@@ -15,8 +15,8 @@ variable "mode" {
   type    = string
   default = "full"
   validation {
-    condition     = contains(["full", "logo_only", "existing_front_door", "function_only"], var.mode)
-    error_message = "Use full, logo_only, existing_front_door, or function_only."
+    condition     = contains(["full", "existing_front_door", "function_only"], var.mode)
+    error_message = "Use full, existing_front_door, or function_only."
   }
 }
 variable "existing_front_door" {

@@ -8,7 +8,7 @@ STARTUP = (ROOT/'webapp/startup-command.txt').read_text().strip()
 ROLES = {'owner':'b7e6dc6d-f1e8-4753-8033-0f276bb0955b','reader':'2a2b9908-6ea1-4ae2-8e65-a410df84e7d1','contributor':'ba92f5b4-2d11-453d-a403-e96b0029c9fe'}
 
 def validate(c):
-    if c.get('mode') not in ('full','logo_only','existing_front_door','function_only'): raise ValueError('Choose full, logo_only, existing_front_door, or function_only.')
+    if c.get('mode') not in ('full','existing_front_door','function_only'): raise ValueError('Choose full, existing_front_door, or function_only.')
     if not re.fullmatch(r'[a-z][a-z0-9]{2,17}',c.get('name','')): raise ValueError('name: 3–18 lowercase alphanumeric characters, starting with a letter; choose a globally unique value.')
     if not re.fullmatch(r'[0-9a-fA-F-]{36}',c.get('subscription_id','')): raise ValueError('Set subscription_id.')
     if c['mode']=='existing_front_door' and not all(c.get('existing_front_door',{}).get(k) for k in ('profile_name','resource_group_name','endpoint_name')): raise ValueError('Existing mode needs profile_name, resource_group_name and endpoint_name.')
@@ -113,7 +113,7 @@ def build(c):
 
 def front_door(c,origins):
     """Separate ARM deployment; existing profile/endpoint are referenced, never redeclared."""
-    full=c['mode'] in ('full','logo_only'); n=c['name'];sub=c['subscription_id'];loc=c.get('location','westeurope')
+    full=c['mode']=='full'; n=c['name'];sub=c['subscription_id'];loc=c.get('location','westeurope')
     fd={'profile_name':n+'-afd','endpoint_name':n+'-edge','resource_group_name':c.get('resource_group','rg-'+n)} if full else c['existing_front_door']
     prefix=f"/subscriptions/{sub}/resourceGroups/{fd['resource_group_name']}/providers/"
     profile=prefix+'Microsoft.Cdn/profiles/'+fd['profile_name'];endpoint=profile+'/afdEndpoints/'+fd['endpoint_name']
