@@ -31,7 +31,10 @@ Python 3.10+; Terraform is not required. Run these commands from the repository 
 4. Keep `.deploy/<name>/manifest.json`, which contains the Function resource ID.
    **The Function is private**, so its hostname is not directly accessible from the
    internet. Follow [existing Front Door integration](existing-front-door.md#function-only)
-   when ready to connect and test it. This does not require deploying the sample website.
+   when ready to connect and test it. Without Front Door, the customer must provide
+   an inbound Function private endpoint (`sites`), private DNS and a connected client.
+   This template creates only Storage private endpoints; outbound VNet integration
+   does not give callers access to the Function.
 
 5. After successful publishing, remove the temporary uploader:
 
@@ -50,6 +53,31 @@ The deployment includes its hosting plan, host/package Storage, logo Storage,
 managed identity and permissions, private networking/DNS, and monitoring. A
 compatible existing plan, network or logo catalog can be [reused](existing-front-door.md#reuse-existing-dependencies).
 The temporary uploader is only for publishing; it is not part of the request flow.
+Monitoring is included by this template but is not required for SVG lookup itself.
+
+The template wires `LOGO_STORAGE_ACCOUNT` and `LOGO_CONTAINER` to the logo catalog,
+selects the attached identity with `AZURE_CLIENT_ID`, and grants that identity
+**Storage Blob Data Reader** on the logo container. Host/package Storage is separate,
+with its own runtime settings and **Storage Blob Data Owner** permission. For a
+reused logo catalog, its private endpoint/DNS connectivity must already work from
+the Function network; supplying its name alone is insufficient.
+
+## Verify the Storage integration
+
+After connecting the inbound route, test these paths against the reachable host
+(using a known existing logo and a known missing key if reusing a catalog):
+
+| Request | Expected result |
+|---|---|
+| `/logos/ACME.svg` | 200, the original stored SVG |
+| `/logos/JEMXX.svg` | 200, generated initials after Storage confirms the blob is missing |
+| `/logos/JEMXX.svg?explicit=true` | 404, no generated image |
+
+`/logos/health` and `/logos/fallback/JEMXX.svg` do **not** read logo Storage.
+They cannot validate its connectivity or permissions. Storage access/configuration
+failures return 502, not a successful fallback. See the [smoke-test command](testing.md).
+The [validation record](validation.md) covers a live full-demo run; Function-only
+has not been separately verified end to end in Azure.
 
 Use `existing_front_door` if you want the deployment to create a new Function and
 connect it to an existing Premium endpoint automatically. Use `full` for the complete
