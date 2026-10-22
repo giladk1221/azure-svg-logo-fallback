@@ -13,8 +13,8 @@ class CliTests(unittest.TestCase):
         c={**BASE,'mode':mode,**kw}
         if mode=='existing_front_door':c['existing_front_door']={'profile_name':'shared','resource_group_name':'edge','endpoint_name':'shared-edge'}
         return c,*template.build(c)
-    def test_three_modes_private_workloads(self):
-        for mode,count in [('full',2),('existing_front_door',1),('function_only',1)]:
+    def test_four_modes_private_workloads(self):
+        for mode,count in [('full',2),('logo_only',1),('existing_front_door',1),('function_only',1)]:
             c,t,info=self.build(mode)
             sites=[r for r in t['resources'] if r['type']=='Microsoft.Web/sites']
             self.assertEqual(len(sites),count)
@@ -33,6 +33,20 @@ class CliTests(unittest.TestCase):
         web=next(r for r in routes if r['name'].endswith('-webapp'))
         self.assertEqual(logos['properties']['cacheConfiguration']['queryStringCachingBehavior'],'UseQueryString')
         self.assertNotIn('cacheConfiguration',web['properties'])
+    def test_logo_only_keeps_function_dependencies_and_omits_website(self):
+        c,t,info=self.build('logo_only')
+        self.assertIsNone(info['webapp_id'])
+        edge,out=template.front_door(c,{'logos':{'id':info['function_id'],'hostname':'function.azurewebsites.net'}})
+        types=[r['type'] for r in edge['resources']]
+        self.assertIn('Microsoft.Cdn/profiles',types)
+        self.assertIn('Microsoft.Network/frontDoorWebApplicationFirewallPolicies',types)
+        routes=[r for r in edge['resources'] if r['type'].endswith('/routes')]
+        self.assertEqual(len(routes),1)
+        self.assertEqual(routes[0]['properties']['patternsToMatch'],['/logos/*','/static/v2/static/logos/*'])
+        self.assertEqual(len(out['approvals']),1)
+        self.assertEqual(out['approvals'][0]['resource_id'],info['function_id'])
+        self.assertFalse(any('ApiManagement' in r['type'] for r in t['resources']+edge['resources']))
+
     def test_existing_front_door_is_not_redeclared(self):
         c,t,info=self.build('existing_front_door')
         edge,out=template.front_door(c,{'logos':{'id':info['function_id'],'hostname':'function.azurewebsites.net'}})
@@ -103,9 +117,9 @@ class CliTests(unittest.TestCase):
             self.assertEqual(az.call_count,1)
     def test_render_each_mode_needs_no_azure_or_terraform(self):
         import tempfile,contextlib,io
-        for mode in ('full','existing_front_door','function_only'):
+        for mode in ('full','logo_only','existing_front_door','function_only'):
             c={**BASE,'name':'render'+mode.replace('_',''),'mode':mode}
-            c['name']={'full':'renderfull','existing_front_door':'renderexisting','function_only':'renderfunction'}[mode]
+            c['name']={'full':'renderfull','logo_only':'renderlogos','existing_front_door':'renderexisting','function_only':'renderfunction'}[mode]
             if mode=='existing_front_door':c['existing_front_door']={'profile_name':'shared','resource_group_name':'edge','endpoint_name':'edge'}
             with tempfile.TemporaryDirectory() as tmp:
                 config=pathlib.Path(tmp)/'config.json';config.write_text(json.dumps(c))

@@ -4,6 +4,8 @@
 
 Python generates ARM JSON; Azure CLI deploys it. This path requires neither Terraform nor Bicep.
 
+For only the Function, use the focused [quick start](function-only.md). For separately owned optional components, see [component deployment](components.md).
+
 ## 1. Choose one option
 
 Set `CLI_OPTION` to **one** value from this table:
@@ -11,6 +13,7 @@ Set `CLI_OPTION` to **one** value from this table:
 | Value | Deployment |
 |---|---|
 | `full` | Everything, including new Front Door and Web App |
+| `logo-only` | Function/dependencies + new Front Door/WAF; no Web App |
 | `existing-front-door` | Function/dependencies and logo routing on an existing Premium endpoint |
 | `function-only` | Function/dependencies; you attach Front Door yourself |
 
@@ -57,14 +60,14 @@ python3 azure-cli/deploy.py deploy --config my-demo.json
 
 The workload and edge use separate incremental ARM deployments. A failure may leave resources: inspect the error and retry with the same config/manifest after correcting it.
 
-**Full / existing Front Door:** review the matching requests, then approve:
+**Full / logo-only / existing Front Door:** review the matching requests, then approve:
 
 ```sh
 python3 azure-cli/deploy.py approve --config my-demo.json
 python3 azure-cli/deploy.py approve --config my-demo.json --yes
 ```
 
-Full mode approves Function and Web App; existing-profile mode only the Function. The deployment prints `demo_url` and saves it in `.deploy/<name>/manifest.json`. If no matching request exists yet, wait and rerun approval.
+Full mode approves Function and Web App; logo-only and existing-profile modes approve only the Function. The deployment prints `demo_url` and saves it in `.deploy/<name>/manifest.json`. If no matching request exists yet, wait and rerun approval.
 
 **Function only:** skip approval for now. The command prints `function_id`, also saved in the manifest. Read the hostname with the command below, then follow [manual integration](existing-front-door.md#function-only). There is no Front Door URL until you connect it.
 
@@ -122,4 +125,4 @@ az group delete --name YOUR_DEDICATED_WORKLOAD_RG --subscription YOUR_SUBSCRIPTI
 az group exists --name YOUR_DEDICATED_WORKLOAD_RG --subscription YOUR_SUBSCRIPTION_ID
 ```
 
-In full mode, the new Front Door is inside that group and is deleted with it. Reused network, plan and catalog remain outside it. Keep the manifest until all owned resources and external assignments have been removed; never delete a shared resource group.
+In full and logo-only modes, the new Front Door is inside that group and is deleted with it. Reused network, plan and catalog remain outside it. Keep the manifest until all owned resources and external assignments have been removed; never delete a shared resource group.

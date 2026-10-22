@@ -39,3 +39,12 @@ run "function_only" {
     error_message = "Function-only must not create a public endpoint or Web App."
   }
 }
+
+run "logo_only" {
+  command = plan
+  variables { mode = "logo_only" }
+  assert {
+    condition     = length(module.webapp) == 0 && length(module.front_door) == 1 && length(output.front_door_private_link_approvals) == 1 && output.webapp_url == null
+    error_message = "Logo-only needs the Function edge connection, without a website."
+  }
+}

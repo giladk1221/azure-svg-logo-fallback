@@ -26,3 +26,20 @@ jobs:
       - run: terraform -chdir=terraform init -backend=false -lockfile=readonly
       - run: terraform -chdir=terraform validate
       - run: terraform -chdir=terraform test
+
+  standalone:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        component: [webapp, front-door]
+    defaults:
+      run:
+        working-directory: terraform/standalone/${{ matrix.component }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '1.15.8'
+      - run: terraform init -backend=false -lockfile=readonly
+      - run: terraform validate
+      - run: terraform test

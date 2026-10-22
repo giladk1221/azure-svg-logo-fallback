@@ -1,0 +1,9 @@
+subscription_id   = "00000000-0000-0000-0000-000000000000"
+name              = "svgedge123456" # Choose a globally unique name.
+location          = "westeurope"
+function_id       = "/subscriptions/.../resourceGroups/.../providers/Microsoft.Web/sites/..."
+function_hostname = "YOUR-ACTUAL-FUNCTION-HOSTNAME.azurewebsites.net"
+# Add after deploying the optional website (same Private Link region):
+# webapp = { id = "/subscriptions/.../providers/Microsoft.Web/sites/...", hostname = "YOUR-ACTUAL-WEBAPP-HOSTNAME.azurewebsites.net" }
+# Optional: add routes to an existing Premium endpoint. Review path conflicts first.
+# existing_front_door = { profile_name = "...", resource_group_name = "...", endpoint_name = "..." }

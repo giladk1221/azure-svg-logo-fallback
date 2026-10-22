@@ -2,6 +2,8 @@
 
 [Back to README](../README.md) · Complete [setup](deployment.md) first. Run commands from the repository root.
 
+For only the Function, use the focused [quick start](function-only.md). For separately owned optional components, see [component deployment](components.md).
+
 ## 1. Choose one option
 
 Set `TF_OPTION` to **one** value from this table:
@@ -9,6 +11,7 @@ Set `TF_OPTION` to **one** value from this table:
 | Value | Deployment |
 |---|---|
 | `full-demo` | Everything, including new Front Door and Web App |
+| `logo-only` | Function/dependencies + new Front Door/WAF; no Web App |
 | `existing-front-door` | Function/dependencies and logo routing on an existing Premium endpoint |
 | `function-only` | Function/dependencies; you attach Front Door yourself |
 
@@ -46,7 +49,7 @@ The default is local state. Protect state/plans and use a remote backend with lo
 
 ## 3. Connect the private origin
 
-**Full / existing Front Door:** review the matching Private Link requests, then approve:
+**Full / logo-only / existing Front Door:** review the matching Private Link requests, then approve:
 
 ```sh
 python3 scripts/approve-front-door.py
@@ -54,7 +57,7 @@ python3 scripts/approve-front-door.py --approve
 terraform -chdir=terraform output -raw demo_url
 ```
 
-The helper reads this stack's outputs and matches exact request messages. Full mode approves both Function and Web App; existing-profile mode only the Function. If Azure has not created the matching request yet, wait and rerun.
+The helper reads this stack's outputs and matches exact request messages. Full mode approves both Function and Web App; logo-only and existing-profile modes approve only the Function. If Azure has not created the matching request yet, wait and rerun.
 
 **Function only:** skip the approval helper for now. Read the outputs below and follow the [manual integration steps](existing-front-door.md#function-only); there is no Front Door URL until you do so.
 

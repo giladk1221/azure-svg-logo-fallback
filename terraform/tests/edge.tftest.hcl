@@ -45,3 +45,13 @@ run "existing_parents_stay_external" {
     error_message = "Existing profile, endpoint, WAF and default Web App routes must not be recreated."
   }
 }
+
+run "new_edge_without_website" {
+  command = plan
+  module { source = "./modules/front-door" }
+  variables { webapp = null }
+  assert {
+    condition     = length(azurerm_cdn_frontdoor_profile.demo) == 1 && length(azurerm_cdn_frontdoor_firewall_policy.demo) == 1 && length(azurerm_cdn_frontdoor_route.demo) == 1 && toset(azurerm_cdn_frontdoor_route.demo["logos"].patterns_to_match) == toset(["/logos/*", "/static/v2/static/logos/*"])
+    error_message = "New logo-only edge must keep WAF and the logo route, with no website route."
+  }
+}
