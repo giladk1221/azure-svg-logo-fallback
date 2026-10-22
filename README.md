@@ -4,6 +4,8 @@ Serve an existing SVG logo from private Storage, or generate a two-character SVG
 
 **Deploy with Terraform or Azure CLI. Both support the same three options. No APIM is involved.**
 
+**Only need the Function App?** Follow the [Function-only quick start](docs/function-only.md). It uses the existing deployment mode and keeps its required dependencies together.
+
 ## Choose what to deploy
 
 | Option | What you get | When to choose it |
